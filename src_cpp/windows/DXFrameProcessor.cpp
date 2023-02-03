@@ -101,7 +101,7 @@ namespace Screen_Capture {
         return DUPL_RETURN_ERROR_UNEXPECTED;
     }
 
-    DUPL_RETURN Initialize(DX_RESOURCES &data)
+    DUPL_RETURN Initialize(DX_RESOURCES &data, const LoggingCallbackT& loggingCallback)
     {
 
         HRESULT hr = S_OK;
@@ -115,7 +115,12 @@ namespace Screen_Capture {
         UINT NumDriverTypes = ARRAYSIZE(DriverTypes);
 
         // Feature levels supported
-        D3D_FEATURE_LEVEL FeatureLevels[] = {D3D_FEATURE_LEVEL_11_0, D3D_FEATURE_LEVEL_10_1, D3D_FEATURE_LEVEL_10_0, D3D_FEATURE_LEVEL_9_1};
+        D3D_FEATURE_LEVEL FeatureLevels[] = {
+            D3D_FEATURE_LEVEL_11_0,
+            D3D_FEATURE_LEVEL_10_1,
+            D3D_FEATURE_LEVEL_10_0,
+            D3D_FEATURE_LEVEL_9_1
+        };
         UINT NumFeatureLevels = ARRAYSIZE(FeatureLevels);
 
         D3D_FEATURE_LEVEL FeatureLevel;
@@ -130,19 +135,21 @@ namespace Screen_Capture {
             }
         }
         if (FAILED(hr)) {
+            loggingCallback("D3D11CreateDevice", hr);
             return ProcessFailure(nullptr, L"Failed to create device in InitializeDx", L"Error", hr);
         }
 
         return DUPL_RETURN_SUCCESS;
     }
 
-    DUPL_RETURN Initialize(DUPLE_RESOURCES &r, ID3D11Device *device, const UINT adapter, const UINT output)
+    DUPL_RETURN Initialize(DUPLE_RESOURCES &r, ID3D11Device *device, const UINT adapter, const UINT output, const LoggingCallbackT& loggingCallback)
     {
         Microsoft::WRL::ComPtr<IDXGIFactory> pFactory;
 
         // Create a DXGIFactory object.
         HRESULT hr = CreateDXGIFactory(__uuidof(IDXGIFactory), (void **)pFactory.GetAddressOf());
         if (FAILED(hr)) {
+            loggingCallback("CreateDXGIFactory", hr);
             return ProcessFailure(nullptr, L"Failed to construct DXGIFactory", L"Error", hr);
         }
 
@@ -150,6 +157,7 @@ namespace Screen_Capture {
         hr = pFactory->EnumAdapters(adapter, DxgiAdapter.GetAddressOf());
 
         if (FAILED(hr)) {
+            loggingCallback("IDXGIAdapter::EnumAdapters", hr);
             return ProcessFailure(device, L"Failed to get DXGI Adapter", L"Error", hr, SystemTransitionsExpectedErrors);
         }
 
@@ -158,6 +166,7 @@ namespace Screen_Capture {
         hr = DxgiAdapter->EnumOutputs(output, DxgiOutput.GetAddressOf());
 
         if (FAILED(hr)) {
+            loggingCallback("IDXGIOutput::EnumOutputs", hr);
             return ProcessFailure(device, L"Failed to get specified output in DUPLICATIONMANAGER", L"Error", hr, EnumOutputsExpectedErrors);
         }
 
@@ -167,12 +176,14 @@ namespace Screen_Capture {
         Microsoft::WRL::ComPtr<IDXGIOutput1> DxgiOutput1;
         hr = DxgiOutput.Get()->QueryInterface(__uuidof(IDXGIOutput1), reinterpret_cast<void **>(DxgiOutput1.GetAddressOf()));
         if (FAILED(hr)) {
+            loggingCallback("QueryInterface --> IDXGIOutput1", hr);
             return ProcessFailure(nullptr, L"Failed to QI for DxgiOutput1 in DUPLICATIONMANAGER", L"Error", hr);
         }
 
         // Create desktop duplication
         hr = DxgiOutput1->DuplicateOutput(device, r.OutputDuplication.GetAddressOf());
         if (FAILED(hr)) {
+            loggingCallback("IDXGIOutput1::DuplicateOutput", hr);
             return ProcessFailure(device, L"Failed to get duplicate output in DUPLICATIONMANAGER", L"Error", hr, CreateDuplicationExpectedErrors);
         }
         r.Output = output;
@@ -273,12 +284,12 @@ namespace Screen_Capture {
     {
         SelectedMonitor = monitor;
         DX_RESOURCES res;
-        auto ret = Initialize(res);
+        auto ret = Initialize(res, data->LoggingCallback_);
         if (ret != DUPL_RETURN_SUCCESS) {
             return ret;
         }
         DUPLE_RESOURCES dupl;
-        ret = Initialize(dupl, res.Device.Get(), Adapter(SelectedMonitor), Id(SelectedMonitor));
+        ret = Initialize(dupl, res.Device.Get(), Adapter(SelectedMonitor), Id(SelectedMonitor), data->LoggingCallback_);
         if (ret != DUPL_RETURN_SUCCESS) {
             return ret;
         }
@@ -289,6 +300,7 @@ namespace Screen_Capture {
         Output = dupl.Output;
 
         Data = data;
+        data->LoggingCallback_("DXFrameProcessor initialized", 0);
 
         return ret;
     }
@@ -297,18 +309,20 @@ namespace Screen_Capture {
     // Process a given frame and its metadata
     //
 
-    DUPL_RETURN DXFrameProcessor::ProcessFrame(const Monitor &currentmonitorinfo)
+    DUPL_RETURN DXFrameProcessor::ProcessFrame(const Monitor &currentmonitorinfo, LoggingCallbackT& rLoggingCallback)
     {
-         Microsoft::WRL::ComPtr<IDXGIResource> DesktopResource;
-        DXGI_OUTDUPL_FRAME_INFO FrameInfo = {0};
+        Microsoft::WRL::ComPtr<IDXGIResource> DesktopResource;
+        DXGI_OUTDUPL_FRAME_INFO FrameInfo = {};
         AquireFrameRAII frame(OutputDuplication.Get());
 
         // Get new frame
         auto hr = frame.AcquireNextFrame(100, &FrameInfo, DesktopResource.GetAddressOf());
         if (hr == DXGI_ERROR_WAIT_TIMEOUT) {
+            rLoggingCallback("IDXGIOutputDuplication::AcquireNextFrame", hr);
             return DUPL_RETURN_SUCCESS;
         }
         else if (FAILED(hr)) {
+            rLoggingCallback("IDXGIOutputDuplication::AcquireNextFrame", hr);
             return ProcessFailure(Device.Get(), L"Failed to acquire next frame in DUPLICATIONMANAGER", L"Error", hr, FrameInfoExpectedErrors);
         }
         if (FrameInfo.AccumulatedFrames == 0) { 
@@ -318,11 +332,12 @@ namespace Screen_Capture {
         // QI for IDXGIResource
         hr = DesktopResource.Get()->QueryInterface(__uuidof(ID3D11Texture2D), reinterpret_cast<void **>(aquireddesktopimage.GetAddressOf()));
         if (FAILED(hr)) {
+            rLoggingCallback("QueryInterface --> ID3D11Texture2D", hr);
             return ProcessFailure(nullptr, L"Failed to QI for ID3D11Texture2D from acquired IDXGIResource in DUPLICATIONMANAGER", L"Error", hr);
         }
 
         if (!StagingSurf) {
-            D3D11_TEXTURE2D_DESC ThisDesc = {0};
+            D3D11_TEXTURE2D_DESC ThisDesc = {};
             aquireddesktopimage->GetDesc(&ThisDesc);
             D3D11_TEXTURE2D_DESC StagingDesc;
             StagingDesc = ThisDesc;
@@ -335,6 +350,7 @@ namespace Screen_Capture {
 
             hr = Device->CreateTexture2D(&StagingDesc, nullptr, StagingSurf.GetAddressOf());
             if (FAILED(hr)) {
+                rLoggingCallback("ID3D11Device::CreateTexture2D", hr);
                 return ProcessFailure(Device.Get(), L"Failed to create staging texture for move rects", L"Error", hr,
                                       SystemTransitionsExpectedErrors);
             }
@@ -353,11 +369,12 @@ namespace Screen_Capture {
             DeviceContext->CopySubresourceRegion(StagingSurf.Get(), 0, 0, 0, 0, aquireddesktopimage.Get(), 0, &sourceRegion);
         }
 
-        D3D11_MAPPED_SUBRESOURCE MappingDesc = {0};
+        D3D11_MAPPED_SUBRESOURCE MappingDesc = {};
         MAPPED_SUBRESOURCERAII mappedresrouce(DeviceContext.Get());
         hr = mappedresrouce.Map(StagingSurf.Get(), 0, D3D11_MAP_READ, 0, &MappingDesc);
         // Get the data
         if (MappingDesc.pData == NULL) {
+            rLoggingCallback("ID3D11DeviceContext::Map", hr);
             return ProcessFailure(Device.Get(),
                                   L"DrawSurface_GetPixelColor: Could not read the pixel color because the mapped subresource returned NULL", L"Error",
                                   hr, SystemTransitionsExpectedErrors);

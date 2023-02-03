@@ -83,15 +83,18 @@ namespace Screen_Capture {
     }
     template <class T, class F> bool TryCaptureMonitor(const F &data, Monitor &monitor)
     {
+        data->LoggingCallback_(std::string("TryCaptureMonitor") + " " + typeid(T).name(), 0);
+
         T frameprocessor;   
         frameprocessor.ImageBufferSize = Width(monitor) * Height(monitor) * sizeof(ImageBGRA);
         if (data->ScreenCaptureData.OnFrameChanged) { // only need the old buffer if difs are needed. If no dif is needed, then the
                                                       // image is always new
             frameprocessor.ImageBuffer = std::make_unique<unsigned char[]>(frameprocessor.ImageBufferSize);
         }
-        auto startmonitors = GetMonitors();
+        auto startmonitors = GetMonitors(data->LoggingCallback_);
         auto ret = frameprocessor.Init(data, monitor);
         if (ret != DUPL_RETURN_SUCCESS) {
+            data->LoggingCallback_("TryCaptureMonitor: error exit", 0);
             return false;
         }
     
@@ -105,25 +108,27 @@ namespace Screen_Capture {
             auto timer = std::atomic_load(&data->ScreenCaptureData.FrameTimer);
 #endif
             timer->start();
-            auto monitors = GetMonitors();
+            auto monitors = GetMonitors(data->LoggingCallback_);
             if (isMonitorInsideBounds(monitors, monitor) && !HasMonitorsChanged(startmonitors, monitors)) {
-                ret = frameprocessor.ProcessFrame(monitors[Index(monitor)]);
+                ret = frameprocessor.ProcessFrame(monitors[Index(monitor)], data->LoggingCallback_);
             }
             else {
                 // something happened, rebuild
+                data->LoggingCallback_("TryCaptureMonitor: detected configuration change", 0);
                 ret = DUPL_RETURN_ERROR_EXPECTED;
             }
             if (ret != DUPL_RETURN_SUCCESS) {
                 if (ret == DUPL_RETURN_ERROR_EXPECTED) {
                     // The system is in a transition state so request the duplication be restarted
                     data->CommonData_.ExpectedErrorEvent = true;
-                    std::cout << "Exiting Thread due to expected error " << std::endl;
+                    //std::cout << "Exiting Thread due to expected error " << std::endl;
                 }
                 else {
                     // Unexpected error so exit the application
                     data->CommonData_.UnexpectedErrorEvent = true;
-                    std::cout << "Exiting Thread due to Unexpected error " << std::endl;
+                    //std::cout << "Exiting Thread due to Unexpected error " << std::endl;
                 }
+                data->LoggingCallback_("TryCaptureMonitor: exit", 0);
                 return true;
             }
             timer->wait();
@@ -132,6 +137,7 @@ namespace Screen_Capture {
                 std::this_thread::sleep_for(50ms);
             }
         }
+        data->LoggingCallback_("TryCaptureMonitor: completed", 0);
         return true;
     }
 
@@ -155,7 +161,7 @@ namespace Screen_Capture {
             auto timer = std::atomic_load(&data->WindowCaptureData.FrameTimer);
 #endif  
             timer->start();
-            ret = frameprocessor.ProcessFrame(wnd);
+            ret = frameprocessor.ProcessFrame(wnd, data->LoggingCallback_);
             if (ret != DUPL_RETURN_SUCCESS) {
                 if (ret == DUPL_RETURN_ERROR_EXPECTED) {
                     // The system is in a transition state so request the duplication be restarted

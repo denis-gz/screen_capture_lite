@@ -72,14 +72,25 @@ namespace Screen_Capture {
         int bottom;
         bool Contains(const ImageRect &a) const { return left <= a.left && right >= a.right && top <= a.top && bottom >= a.bottom; }
     }; 
+
+    #pragma pack(push)
+    #pragma pack(1)
     struct SC_LITE_EXTERN ImageBGRA {
         unsigned char B, G, R, A;
     };
+    #pragma pack(pop)
+
     struct SC_LITE_EXTERN Image {
         ImageRect Bounds;
         int RowStrideInBytes = 0;
         bool isContiguous = false;
         const ImageBGRA *Data = nullptr;
+    };
+
+    enum CaptureMethod {
+        Unspecified,
+        DirectX,
+        Gdi,
     };
 
     inline bool operator==(const ImageRect &a, const ImageRect &b)
@@ -129,9 +140,10 @@ namespace Screen_Capture {
         users can see how to extra data and convert it to their own needed format. Initially, I included custom extract functions
         but this is beyond the scope of this library. You must copy the image data if you want to use it as the library owns the Image Data.
     */
-    inline void Extract(const Image &img, unsigned char *dst, size_t dst_size)
+    inline bool Extract(const Image &img, unsigned char *dst, size_t dst_size)
     {
-        assert(dst_size >= static_cast<size_t>(Width(img) * Height(img) * sizeof(ImageBGRA)));
+        if (dst_size < static_cast<size_t>(Width(img) * Height(img) * sizeof(ImageBGRA)))
+            return false;
         auto startdst = dst;
         auto startsrc = StartSrc(img);
         if (isDataContiguous(img)) { // no padding, the entire copy can be a single memcpy call
@@ -144,7 +156,10 @@ namespace Screen_Capture {
                 startsrc = GotoNextRow(img, startsrc);      // advance to the next row
             }
         }
+        return true;
     }
+
+    using LoggingCallbackT = std::function<void (const std::string&, long)>;
 
     class Timer {
         using Clock =
@@ -170,8 +185,7 @@ namespace Screen_Capture {
         std::chrono::microseconds duration() const { return Duration; }
     };
     // will return all attached monitors
-
-    SC_LITE_EXTERN std::vector<Monitor> GetMonitors();
+    SC_LITE_EXTERN std::vector<Monitor> GetMonitors(const LoggingCallbackT& loggingCallback = {});
     // will return all windows
     SC_LITE_EXTERN std::vector<Window> GetWindows();
     // MAC, permission can be requested, but the app still needs to be restarted after permission is given.
@@ -227,7 +241,8 @@ namespace Screen_Capture {
         // When a mouse image changes or the mouse changes position, the callback is invoked.
         virtual std::shared_ptr<ICaptureConfiguration<CAPTURECALLBACK>> onMouseChanged(const MouseCallback &cb) = 0;
         // start capturing
-        virtual std::shared_ptr<IScreenCaptureManager> start_capturing() = 0;
+        virtual std::shared_ptr<IScreenCaptureManager> start_capturing(
+            CaptureMethod method = CaptureMethod::Unspecified, LoggingCallbackT loggingCallback = {}) = 0;
     };
 
     // the callback of windowstocapture represents the list of monitors which should be captured. Users should return the list of monitors they want

@@ -102,7 +102,10 @@ class ScreenCaptureManager : public IScreenCaptureManager {
     void start()
     {
         Thread_ = std::thread([&]() {
-            if(ShuttingDown) return;
+            if (ShuttingDown) {
+                Thread_Data_->LoggingCallback_("Shutting down", 0);
+                return;
+            }
             ThreadManager ThreadMgr;
             ThreadMgr.Init(Thread_Data_);
 
@@ -188,9 +191,12 @@ class ScreenCaptureConfiguration : public ICaptureConfiguration<ScreenCaptureCal
         return std::make_shared<ScreenCaptureConfiguration>(Impl_);
     }
 
-    virtual std::shared_ptr<IScreenCaptureManager> start_capturing() override
+    virtual std::shared_ptr<IScreenCaptureManager> start_capturing(CaptureMethod method, LoggingCallbackT loggingCallback) override
     {
-        assert(Impl_->Thread_Data_->ScreenCaptureData.OnMouseChanged || Impl_->Thread_Data_->ScreenCaptureData.OnFrameChanged ||
+        Impl_->Thread_Data_->CaptureMethod_ = method;
+        Impl_->Thread_Data_->LoggingCallback_ = loggingCallback;
+        assert(Impl_->Thread_Data_->ScreenCaptureData.OnMouseChanged ||
+               Impl_->Thread_Data_->ScreenCaptureData.OnFrameChanged ||
                Impl_->Thread_Data_->ScreenCaptureData.OnNewFrame);
         Impl_->start();
         return Impl_;
@@ -230,9 +236,12 @@ class WindowCaptureConfiguration : public ICaptureConfiguration<WindowCaptureCal
         return std::make_shared<WindowCaptureConfiguration>(Impl_);
     }
 
-    virtual std::shared_ptr<IScreenCaptureManager> start_capturing() override
+    virtual std::shared_ptr<IScreenCaptureManager> start_capturing(CaptureMethod method, LoggingCallbackT loggingCallback) override
     {
-        assert(Impl_->Thread_Data_->WindowCaptureData.OnMouseChanged || Impl_->Thread_Data_->WindowCaptureData.OnFrameChanged ||
+        Impl_->Thread_Data_->CaptureMethod_ = method;
+        Impl_->Thread_Data_->LoggingCallback_ = loggingCallback;
+        assert(Impl_->Thread_Data_->WindowCaptureData.OnMouseChanged ||
+               Impl_->Thread_Data_->WindowCaptureData.OnFrameChanged ||
                Impl_->Thread_Data_->WindowCaptureData.OnNewFrame);
         Impl_->start();
         return Impl_;

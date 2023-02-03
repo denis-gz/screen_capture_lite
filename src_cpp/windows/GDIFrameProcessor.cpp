@@ -10,10 +10,17 @@ namespace Screen_Capture {
         auto Ret = DUPL_RETURN_SUCCESS;
 
         MonitorDC.DC = CreateDCA(Name(SelectedMonitor), NULL, NULL, NULL);
+        if (!MonitorDC.DC)
+            data->LoggingCallback_("CreateDCA", ::GetLastError());
         CaptureDC.DC = CreateCompatibleDC(MonitorDC.DC);
+        if (!CaptureDC.DC)
+            data->LoggingCallback_("CreateCompatibleDC", ::GetLastError());
         CaptureBMP.Bitmap = CreateCompatibleBitmap(MonitorDC.DC, Width(SelectedMonitor), Height(SelectedMonitor));
+        if (!CaptureBMP.Bitmap)
+            data->LoggingCallback_("CreateCompatibleBitmap", ::GetLastError());
         NewImageBuffer = std::make_unique<unsigned char[]>(ImageBufferSize);
         if (!MonitorDC.DC || !CaptureDC.DC || !CaptureBMP.Bitmap) {
+            data->LoggingCallback_("GDIFrameProcessor::Init", E_FAIL);
             return DUPL_RETURN::DUPL_RETURN_ERROR_EXPECTED;
         }
 
@@ -42,7 +49,7 @@ namespace Screen_Capture {
         Data = data;
         return Ret;
     }
-    DUPL_RETURN GDIFrameProcessor::ProcessFrame(const Monitor &currentmonitorinfo)
+    DUPL_RETURN GDIFrameProcessor::ProcessFrame(const Monitor &currentmonitorinfo, LoggingCallbackT& loggingCallback)
     { 
         auto Ret = DUPL_RETURN_SUCCESS;
 
@@ -54,7 +61,8 @@ namespace Screen_Capture {
         // Selecting an object into the specified DC
         auto originalBmp = SelectObject(CaptureDC.DC, CaptureBMP.Bitmap);
 
-        if (BitBlt(CaptureDC.DC, 0, 0, ret.right, ret.bottom, MonitorDC.DC, 0, 0, SRCCOPY | CAPTUREBLT) == FALSE) {
+        if (!BitBlt(CaptureDC.DC, 0, 0, ret.right, ret.bottom, MonitorDC.DC, 0, 0, SRCCOPY | CAPTUREBLT)) {
+            loggingCallback("BitBlt", ::GetLastError());
             // if the screen cannot be captured, return
             SelectObject(CaptureDC.DC, originalBmp);
             return DUPL_RETURN::DUPL_RETURN_ERROR_EXPECTED; // likely a permission issue
@@ -72,7 +80,8 @@ namespace Screen_Capture {
             bi.biBitCount = sizeof(ImageBGRA) * 8; // always 32 bits damnit!!!
             bi.biCompression = BI_RGB;
             bi.biSizeImage = ((ret.right * bi.biBitCount + 31) / (sizeof(ImageBGRA) * 8)) * sizeof(ImageBGRA)  * ret.bottom;
-            GetDIBits(MonitorDC.DC, CaptureBMP.Bitmap, 0, (UINT)ret.bottom, NewImageBuffer.get(), (BITMAPINFO *)&bi, DIB_RGB_COLORS);
+            if (!GetDIBits(MonitorDC.DC, CaptureBMP.Bitmap, 0, (UINT)ret.bottom, NewImageBuffer.get(), (BITMAPINFO *)&bi, DIB_RGB_COLORS))
+                loggingCallback("GetDIBits", ::GetLastError());
             SelectObject(CaptureDC.DC, originalBmp);
             ProcessCapture(Data->ScreenCaptureData, *this, currentmonitorinfo, NewImageBuffer.get(), Width(SelectedMonitor)* sizeof(ImageBGRA));
         }
@@ -80,7 +89,7 @@ namespace Screen_Capture {
         return Ret;
     }
       
-    DUPL_RETURN GDIFrameProcessor::ProcessFrame(Window &selectedwindow)
+    DUPL_RETURN GDIFrameProcessor::ProcessFrame(Window &selectedwindow, LoggingCallbackT& loggingCallback)
     {
         auto Ret = DUPL_RETURN_SUCCESS;
         auto windowrect = SL::Screen_Capture::GetWindowRect(SelectedWindow);
@@ -94,6 +103,7 @@ namespace Screen_Capture {
         selectedwindow.Position.y = windowrect.ClientRect.top;
 
         if (!IsWindow(SelectedWindow) || selectedwindow.Size.x != Width(ret) || selectedwindow.Size.y != Height(ret)) {
+            loggingCallback("ProcessFrame: window size changed", 0);
             return DUPL_RETURN::DUPL_RETURN_ERROR_EXPECTED; // window size changed. This will rebuild everything
         }
 
@@ -105,11 +115,13 @@ namespace Screen_Capture {
         BOOL result = PrintWindow((HWND)selectedwindow.Handle, CaptureDC.DC, PW_RENDERFULLCONTENT );
 
         if ( !result ) {
+            loggingCallback("PrintWindow", ::GetLastError());
             result = BitBlt(CaptureDC.DC, left, top, ret.right, ret.bottom, MonitorDC.DC, 0, 0, SRCCOPY | CAPTUREBLT);
         }
 
         if ( !result ) {
             // if the screen cannot be captured, return
+            loggingCallback("BitBlt", ::GetLastError());
             SelectObject(CaptureDC.DC, originalBmp);
             return DUPL_RETURN::DUPL_RETURN_ERROR_EXPECTED; // likely a permission issue
         }
@@ -143,7 +155,8 @@ namespace Screen_Capture {
         bi.biBitCount = sizeof(ImageBGRA) * 8; // always 32 bits damnit!!!
         bi.biCompression = BI_RGB;
         bi.biSizeImage = ((Width(ret) * bi.biBitCount + 31) / (sizeof(ImageBGRA) * 8)) * sizeof(ImageBGRA)  * Height(ret);
-        GetDIBits(MonitorDC.DC, CaptureBMP.Bitmap, 0, (UINT)Height(ret), NewImageBuffer.get(), (BITMAPINFO *)&bi, DIB_RGB_COLORS);
+        if (!GetDIBits(MonitorDC.DC, CaptureBMP.Bitmap, 0, (UINT)Height(ret), NewImageBuffer.get(), (BITMAPINFO *)&bi, DIB_RGB_COLORS))
+            loggingCallback("GetDIBits", ::GetLastError());
         SelectObject(CaptureDC.DC, originalBmp);
         ProcessCapture(Data->WindowCaptureData, *this, selectedwindow, NewImageBuffer.get(), Width(selectedwindow)* sizeof(ImageBGRA));
 

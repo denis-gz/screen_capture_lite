@@ -38,6 +38,8 @@ namespace Screen_Capture {
         CaptureData<ScreenCaptureCallback, MouseCallback, MonitorCallback> ScreenCaptureData;
         CaptureData<WindowCaptureCallback, MouseCallback, WindowCallback> WindowCaptureData;
         CommonData CommonData_;
+        CaptureMethod CaptureMethod_ = {};
+        LoggingCallbackT LoggingCallback_;
     };
 
     class BaseFrameProcessor {

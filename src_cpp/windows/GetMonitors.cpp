@@ -25,19 +25,20 @@ namespace Screen_Capture {
         return 1.0f;
     }
 
-    std::vector<Monitor> GetMonitors()
+    std::vector<Monitor> GetMonitors(const LoggingCallbackT& loggingCallback)
     {
         std::vector<Monitor> ret;
 
         IDXGIAdapter *pAdapter = nullptr;
         IDXGIFactory *pFactory = nullptr;
+        HRESULT hResult = S_OK;
 
         // Create a DXGIFactory object.
-        if (SUCCEEDED(CreateDXGIFactory(__uuidof(IDXGIFactory), (void **)&pFactory))) {
-            for (UINT i = 0; pFactory->EnumAdapters(i, &pAdapter) != DXGI_ERROR_NOT_FOUND; ++i) {
+        if (SUCCEEDED(hResult = CreateDXGIFactory(__uuidof(IDXGIFactory), (void **)&pFactory))) {
+            for (UINT i = 0; (hResult = pFactory->EnumAdapters(i, &pAdapter)) != DXGI_ERROR_NOT_FOUND; ++i) {
                 IDXGIOutput *pOutput;
 
-                for (UINT j = 0; pAdapter->EnumOutputs(j, &pOutput) != DXGI_ERROR_NOT_FOUND; ++j) {
+                for (UINT j = 0; (hResult = pAdapter->EnumOutputs(j, &pOutput)) != DXGI_ERROR_NOT_FOUND; ++j) {
                     DXGI_OUTPUT_DESC desc;
                     pOutput->GetDesc(&desc);
                     pOutput->Release();
@@ -55,16 +56,28 @@ namespace Screen_Capture {
                     auto xdpi = GetDeviceCaps(mon, LOGPIXELSX);
                     DeleteDC(mon);
                     auto scale = scaleFromDpi(xdpi);
+                    bool flipSides = desc.Rotation == DXGI_MODE_ROTATION_ROTATE90 ||
+                                     desc.Rotation == DXGI_MODE_ROTATION_ROTATE270;
 
-                    bool flipSides = desc.Rotation == DXGI_MODE_ROTATION_ROTATE90 || desc.Rotation == DXGI_MODE_ROTATION_ROTATE270;
-                    ret.push_back(CreateMonitor(static_cast<int>(ret.size()), j, i, flipSides ? devMode.dmPelsWidth : devMode.dmPelsHeight,
-                                                flipSides ? devMode.dmPelsHeight : devMode.dmPelsWidth, devMode.dmPosition.x, devMode.dmPosition.y,
-                                                name, scale));
+                    ret.push_back(CreateMonitor(static_cast<int>(ret.size()), j, i,
+                        flipSides ? devMode.dmPelsWidth : devMode.dmPelsHeight,
+                        flipSides ? devMode.dmPelsHeight : devMode.dmPelsWidth,
+                        devMode.dmPosition.x, devMode.dmPosition.y,
+                        name, scale));
+                }
+                if (!SUCCEEDED(hResult) && hResult != DXGI_ERROR_NOT_FOUND) {
+                    loggingCallback("IDXGIAdapter::EnumOutputs", hResult);
                 }
                 pAdapter->Release();
             }
+            if (!SUCCEEDED(hResult) && hResult != DXGI_ERROR_NOT_FOUND) {
+                loggingCallback("IDXGIFactory::EnumAdapters", hResult);
+            }
             pFactory->Release();
         }
+        else
+            loggingCallback("CreateDXGIFactory", hResult);
+
         return ret;
     }
 } // namespace Screen_Capture

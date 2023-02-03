@@ -20,8 +20,9 @@ void SL::Screen_Capture::ThreadManager::Init(const std::shared_ptr<Thread_Data>&
     assert(m_ThreadHandles.empty());
 
     if (data->ScreenCaptureData.getThingsToWatch) {
+        data->LoggingCallback_("Init: have screens to watch", 0);
         auto monitors = data->ScreenCaptureData.getThingsToWatch();
-        auto mons = GetMonitors();
+        auto mons = GetMonitors(data->LoggingCallback_);
         for ([[maybe_unused]] auto &m : monitors) {
             assert(isMonitorInsideBounds(mons, m));
         }
@@ -32,22 +33,18 @@ void SL::Screen_Capture::ThreadManager::Init(const std::shared_ptr<Thread_Data>&
             m_ThreadHandles[i] = std::thread(&SL::Screen_Capture::RunCaptureMonitor, data, monitors[i]);
         }
         if (data->ScreenCaptureData.OnMouseChanged) {
-            m_ThreadHandles.back() = std::thread([data] {
-                SL::Screen_Capture::RunCaptureMouse(data);
-            });
+            m_ThreadHandles.back() = std::thread(&SL::Screen_Capture::RunCaptureMouse, data);
         }
-
     }
     else if (data->WindowCaptureData.getThingsToWatch) {
+        data->LoggingCallback_("Init: have windows to watch", 0);
         auto windows = data->WindowCaptureData.getThingsToWatch();
         m_ThreadHandles.resize(windows.size() + (data->WindowCaptureData.OnMouseChanged ? 1 : 0)); // add another thread for mouse capturing if needed
         for (size_t i = 0; i < windows.size(); ++i) {
             m_ThreadHandles[i] = std::thread(&SL::Screen_Capture::RunCaptureWindow, data, windows[i]);
         }
         if (data->WindowCaptureData.OnMouseChanged) {
-            m_ThreadHandles.back() = std::thread([data] {
-                SL::Screen_Capture::RunCaptureMouse(data);
-            });
+            m_ThreadHandles.back() = std::thread(&SL::Screen_Capture::RunCaptureMouse, data);
         }
     }
 }

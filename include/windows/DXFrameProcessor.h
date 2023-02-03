@@ -28,7 +28,7 @@ namespace SL {
             void Pause() {}
             void Resume() {}
             DUPL_RETURN Init(std::shared_ptr<Thread_Data> data, Monitor &monitor);
-            DUPL_RETURN ProcessFrame(const Monitor &currentmonitorinfo);
+            DUPL_RETURN ProcessFrame(const Monitor &currentmonitorinfo, LoggingCallbackT& rLoggingCallback);
         };
 
     } // namespace Screen_Capture
