@@ -131,33 +131,15 @@ namespace Screen_Capture {
     SC_LITE_EXTERN int X(const Point &p);
     SC_LITE_EXTERN int Y(const Point &p);
 
-    // the start of the image data, this is not guarenteed to be contiguous.
+    // The start of the image data, this is not guaranteed to be contiguous.
     SC_LITE_EXTERN const ImageBGRA *StartSrc(const Image &img);
+    SC_LITE_EXTERN const ImageBGRA *LastRow(const Image &img);
     SC_LITE_EXTERN const ImageBGRA *GotoNextRow(const Image &img, const ImageBGRA *current);
+    SC_LITE_EXTERN const ImageBGRA *GotoPrevRow(const Image &img, const ImageBGRA *current);
+    // The number of bytes per row, NOT including row padding
+    SC_LITE_EXTERN int RowStride(const Image &img);
     SC_LITE_EXTERN bool isDataContiguous(const Image &img);
-    /*
-        this is the ONLY funcion for pulling data out of the Image object and is layed out here in the header so that
-        users can see how to extra data and convert it to their own needed format. Initially, I included custom extract functions
-        but this is beyond the scope of this library. You must copy the image data if you want to use it as the library owns the Image Data.
-    */
-    inline bool Extract(const Image &img, unsigned char *dst, size_t dst_size)
-    {
-        if (dst_size < static_cast<size_t>(Width(img) * Height(img) * sizeof(ImageBGRA)))
-            return false;
-        auto startdst = dst;
-        auto startsrc = StartSrc(img);
-        if (isDataContiguous(img)) { // no padding, the entire copy can be a single memcpy call
-            memcpy(startdst, startsrc, Width(img) * Height(img) * sizeof(ImageBGRA));
-        }
-        else {
-            for (auto i = 0; i < Height(img); i++) {
-                memcpy(startdst, startsrc, sizeof(ImageBGRA) * Width(img));
-                startdst += sizeof(ImageBGRA) * Width(img); // advance to the next row
-                startsrc = GotoNextRow(img, startsrc);      // advance to the next row
-            }
-        }
-        return true;
-    }
+    SC_LITE_EXTERN bool Extract(const Image &img, unsigned char *dst, size_t dst_size, bool flip = false);
 
     using LoggingCallbackT = std::function<void (const std::string&, long)>;
 

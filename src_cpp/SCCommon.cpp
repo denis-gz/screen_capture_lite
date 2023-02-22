@@ -235,14 +235,47 @@ namespace Screen_Capture {
     int X(const Point &p) { return p.x; }
     int Y(const Point &p) { return p.y; }
     const ImageRect &Rect(const Image &img) { return img.Bounds; }
+    const ImageBGRA *StartSrc(const Image &img) { return img.Data; }
+    const ImageBGRA *LastRow(const Image &img) {
+        auto c = reinterpret_cast<const unsigned char *>(img.Data);
+        return reinterpret_cast<const ImageBGRA *>(c + (Height(img) - 1) * img.RowStrideInBytes);
+    }
     const ImageBGRA *GotoNextRow(const Image &img, const ImageBGRA *current)
     {
         auto c = reinterpret_cast<const unsigned char *>(current);
         return reinterpret_cast<const ImageBGRA *>(c + img.RowStrideInBytes);
     }
+    const ImageBGRA *GotoPrevRow(const Image &img, const ImageBGRA *current)
+    {
+        auto c = reinterpret_cast<const unsigned char *>(current);
+        return reinterpret_cast<const ImageBGRA *>(c - img.RowStrideInBytes);
+    }
     bool isDataContiguous(const Image &img) { return img.isContiguous; }
-    // number of bytes per row, NOT including the Rowpadding
     int RowStride(const Image &img) { return sizeof(ImageBGRA) * Width(img); }
-    const ImageBGRA *StartSrc(const Image &img) { return img.Data; }
+    bool Extract(const Image &img, unsigned char *dst, size_t dst_size, bool flip)
+    {
+        if (dst_size < static_cast<size_t>(Width(img) * Height(img) * sizeof(ImageBGRA)))
+            return false;
+        auto startdst = dst;
+        auto startsrc = flip ? LastRow(img) : StartSrc(img);
+        if (!flip && isDataContiguous(img)) { // no padding, the entire copy can be a single memcpy call
+            memcpy(startdst, startsrc, Width(img) * Height(img) * sizeof(ImageBGRA));
+        }
+        else if (flip) {
+            for (auto i = 0; i < Height(img); ++i) {
+                memcpy(startdst, startsrc, sizeof(ImageBGRA) * Width(img));
+                startdst += sizeof(ImageBGRA) * Width(img); // advance to the next row
+                startsrc = GotoPrevRow(img, startsrc);      // advance back one row
+            }
+        }
+        else {
+            for (auto i = 0; i < Height(img); ++i) {
+                memcpy(startdst, startsrc, sizeof(ImageBGRA) * Width(img));
+                startdst += sizeof(ImageBGRA) * Width(img); // advance to the next row
+                startsrc = GotoNextRow(img, startsrc);      // advance to the next row
+            }
+        }
+        return true;
+    }
 } // namespace Screen_Capture
 } // namespace SL
