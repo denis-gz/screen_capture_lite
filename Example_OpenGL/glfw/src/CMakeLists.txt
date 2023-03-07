@@ -129,7 +129,7 @@ if (CMAKE_C_COMPILER_ID STREQUAL "GNU" OR
         # Tell Clang-CL that this is a Clang flag
         target_compile_options(glfw PRIVATE "/clang:-Wall")
     else()
-        target_compile_options(glfw PRIVATE "-Wall")
+        target_compile_options(glfw PRIVATE "-Wall" "-Wno-deprecated-declarations")
     endif()
 elseif (MSVC)
     target_compile_options(glfw PRIVATE "/W3")

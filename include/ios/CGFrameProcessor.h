@@ -9,7 +9,7 @@ namespace SL {
         public:
              
             DUPL_RETURN Init(std::shared_ptr<Thread_Data> data, Window& window);
-            DUPL_RETURN ProcessFrame(const Window& window);
+            DUPL_RETURN ProcessFrame(const Window& window, LoggingCallbackT& rLoggingCallback);
         };
 
     }

@@ -11,7 +11,7 @@ namespace SL {
         void Pause_(NSFrameProcessorImpl*);
         void Resume_(NSFrameProcessorImpl*);
     
-    DUPL_RETURN Init(NSFrameProcessorImpl* createdimpl, NSFrameProcessor* parent, const std::chrono::microseconds& );
+        DUPL_RETURN Init(NSFrameProcessorImpl* createdimpl, NSFrameProcessor* parent, const std::chrono::microseconds& );
         
         class NSFrameProcessor : public BaseFrameProcessor {
             NSFrameProcessorImpl* NSFrameProcessorImpl_ = nullptr;
@@ -24,9 +24,9 @@ namespace SL {
             void Resume();
             
             DUPL_RETURN Init(std::shared_ptr<Thread_Data> data, Monitor& monitor);
-            DUPL_RETURN ProcessFrame(const Monitor& curentmonitorinfo);
+            DUPL_RETURN ProcessFrame(const Monitor& curentmonitorinfo, LoggingCallbackT& rLoggingCallback);
             DUPL_RETURN Init(std::shared_ptr<Thread_Data> data, Window& window);
-            DUPL_RETURN ProcessFrame(const Window& window);
+            DUPL_RETURN ProcessFrame(const Window& window, LoggingCallbackT& rLoggingCallback);
             
         };
     }

@@ -136,7 +136,7 @@ inline std::ostream &operator<<(std::ostream &os, const SL::Screen_Capture::Moni
 }
 
 auto onNewFramestart = std::chrono::high_resolution_clock::now();
-void createframegrabber()
+void createframegrabber(const SL::Screen_Capture::LoggingCallbackT& loggingCallback)
 {
     realcounter = 0;
     onNewFramecounter = 0;
@@ -198,13 +198,13 @@ void createframegrabber()
 
                 */
             })
-            ->start_capturing();
+            ->start_capturing(SL::Screen_Capture::CaptureMethod::Unspecified, loggingCallback);
 
     framgrabber->setFrameChangeInterval(std::chrono::milliseconds(100));
     framgrabber->setMouseChangeInterval(std::chrono::milliseconds(100));
 }
 
-void createpartialframegrabber()
+void createpartialframegrabber(const SL::Screen_Capture::LoggingCallbackT& loggingCallback)
 {
     realcounter = 0;
     onNewFramecounter = 0;
@@ -275,7 +275,7 @@ void createpartialframegrabber()
                 }
                 */
             })
-            ->start_capturing();
+            ->start_capturing(SL::Screen_Capture::CaptureMethod::Unspecified, loggingCallback);
 
     framgrabber->setFrameChangeInterval(std::chrono::milliseconds(100));
     framgrabber->setMouseChangeInterval(std::chrono::milliseconds(100));
@@ -301,7 +301,7 @@ auto getWindowToCapture(std::string window_to_search_for = "blizzard")
     return filtereditems;
 }
 
-void createwindowgrabber()
+void createwindowgrabber(const SL::Screen_Capture::LoggingCallbackT& loggingCallback)
 {
     auto w = getWindowToCapture();
     if (w.empty()) {
@@ -355,7 +355,7 @@ void createwindowgrabber()
                 }
                 */
             })
-            ->start_capturing();
+            ->start_capturing(SL::Screen_Capture::CaptureMethod::Unspecified, loggingCallback);
 
     framgrabber->setFrameChangeInterval(std::chrono::milliseconds(100));
     framgrabber->setMouseChangeInterval(std::chrono::milliseconds(100));
@@ -366,6 +366,13 @@ int main()
     std::srand(std::time(nullptr));
     std::cout << "Starting Capture Demo/Test" << std::endl;
     std::cout << "Testing captured monitor bounds check" << std::endl;
+
+    SL::Screen_Capture::LoggingCallbackT log = [] (const std::string& msg, long error) {
+        if (error)
+            std::cout << msg << " failed: error " << error << std::endl;
+        else
+            std::cout << msg << std::endl;
+    };
 
     TestCopyContiguous();
     TestCopyNonContiguous();
@@ -387,12 +394,12 @@ int main()
         return 0;
     }
 
-    auto goodmonitors = SL::Screen_Capture::GetMonitors();
+    auto goodmonitors = SL::Screen_Capture::GetMonitors(log);
     for (auto &m : goodmonitors) {
         std::cout << m << std::endl;
         assert(SL::Screen_Capture::isMonitorInsideBounds(goodmonitors, m));
     }
-    auto badmonitors = SL::Screen_Capture::GetMonitors();
+    auto badmonitors = SL::Screen_Capture::GetMonitors(log);
 
     for (auto m : badmonitors) {
         m.Height += 1;
@@ -405,15 +412,15 @@ int main()
         assert(!SL::Screen_Capture::isMonitorInsideBounds(goodmonitors, m));
     }
     std::cout << "Running display capturing for 10 seconds" << std::endl;
-    createframegrabber();
+    createframegrabber(log);
     std::this_thread::sleep_for(std::chrono::seconds(10));
 
     std::cout << "Running window capturing for 10 seconds" << std::endl;
-    createwindowgrabber();
+    createwindowgrabber(log);
     std::this_thread::sleep_for(std::chrono::seconds(10));
 
     std::cout << "Running Partial display capturing for 10 seconds" << std::endl;
-    createpartialframegrabber();
+    createpartialframegrabber(log);
     std::this_thread::sleep_for(std::chrono::seconds(10));
 
     std::cout << "Pausing for 10 seconds. " << std::endl;
@@ -450,14 +457,14 @@ int main()
     std::this_thread::sleep_for(std::chrono::seconds(5));
 
     std::cout << "Testing recreating" << std::endl;
-    createframegrabber();
+    createframegrabber(log);
     std::this_thread::sleep_for(std::chrono::seconds(5));
 
     std::cout << "Testing destroy" << std::endl;
     framgrabber = nullptr;
 
     std::cout << "Testing recreating" << std::endl;
-    createframegrabber();
+    createframegrabber(log);
     std::this_thread::sleep_for(std::chrono::seconds(5));
 
     // 4k image

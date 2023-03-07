@@ -6,7 +6,7 @@
 namespace SL{
     namespace Screen_Capture{
         
-        std::vector<Monitor> GetMonitors() {
+        std::vector<Monitor> GetMonitors(const LoggingCallbackT& loggingCallback) {
             std::vector<Monitor> ret;
             std::vector<CGDirectDisplayID> displays;
             CGDisplayCount count=0;

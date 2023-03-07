@@ -19,7 +19,7 @@ namespace SL {
             return  Screen_Capture::Init(NSFrameProcessorImpl_, this, LastDuration);
         }
          
-        DUPL_RETURN NSFrameProcessor::ProcessFrame(const Monitor &curentmonitorinfo)
+        DUPL_RETURN NSFrameProcessor::ProcessFrame(const Monitor& curentmonitorinfo, LoggingCallbackT& rLoggingCallback)
         {
             auto timer = std::atomic_load(&Data->ScreenCaptureData.FrameTimer);
             //get the timer and check if we need to update the internal timer

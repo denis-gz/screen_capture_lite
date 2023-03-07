@@ -86,12 +86,14 @@ set(libsrc
 if(NOT ${BUILD_SHARED_LIBS})
     message("Building STATIC Library")
     add_library(${PROJECT_NAME}_static STATIC ${libsrc})
+    target_compile_options(${PROJECT_NAME}_static PRIVATE "-Wno-unused-variable")
 else()
   message("Building SHARED Library")
   
     add_library(${PROJECT_NAME}_shared SHARED ${libsrc} ../include/ScreenCapture_C_API.h)
 
 	set_target_properties(${PROJECT_NAME}_shared PROPERTIES DEFINE_SYMBOL SC_LITE_DLL)
+    target_compile_options(${PROJECT_NAME}_shared PRIVATE "-Wno-unused-variable")
 	 if(WIN32) 
 		target_link_libraries(${PROJECT_NAME}_shared Dwmapi)
 		if (!MINGW)

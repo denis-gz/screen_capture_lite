@@ -52,6 +52,11 @@ add_executable(${PROJECT_NAME}_${TARGET_SUFFIX}
 	lodepng.cpp
 	Screen_Capture_Example.cpp
 )
+
+if (APPLE)
+    target_compile_options(${PROJECT_NAME}_${TARGET_SUFFIX} PRIVATE "-Wno-unused-variable")
+endif()
+
 target_link_libraries(${PROJECT_NAME}_${TARGET_SUFFIX} screen_capture_lite_${TARGET_SUFFIX} ${${PROJECT_NAME}_PLATFORM_LIBS})
 
 install (TARGETS ${PROJECT_NAME}_${TARGET_SUFFIX} screen_capture_lite_${TARGET_SUFFIX}

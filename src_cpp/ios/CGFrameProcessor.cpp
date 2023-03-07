@@ -13,7 +13,7 @@ namespace Screen_Capture {
         Data = data;
         return ret;
     }
-    DUPL_RETURN CGFrameProcessor::ProcessFrame(const Window &window)
+    DUPL_RETURN CGFrameProcessor::ProcessFrame(const Window &window, LoggingCallbackT& rLoggingCallback)
     {
 
         auto Ret = DUPL_RETURN_SUCCESS;
