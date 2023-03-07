@@ -33,7 +33,7 @@ namespace SL {
             Pause_(NSFrameProcessorImpl_);
         }
         void NSFrameProcessor::Resume(){
-              Resume_(NSFrameProcessorImpl_);
+            Resume_(NSFrameProcessorImpl_);
         }
     }
 }

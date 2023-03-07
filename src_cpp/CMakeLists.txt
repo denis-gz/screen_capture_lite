@@ -88,19 +88,20 @@ if(NOT ${BUILD_SHARED_LIBS})
     add_library(${PROJECT_NAME}_static STATIC ${libsrc})
     target_compile_options(${PROJECT_NAME}_static PRIVATE "-Wno-unused-variable")
 else()
-  message("Building SHARED Library")
+    message("Building SHARED Library")
   
     add_library(${PROJECT_NAME}_shared SHARED ${libsrc} ../include/ScreenCapture_C_API.h)
 
-	set_target_properties(${PROJECT_NAME}_shared PROPERTIES DEFINE_SYMBOL SC_LITE_DLL)
+    set_target_properties(${PROJECT_NAME}_shared PROPERTIES DEFINE_SYMBOL SC_LITE_DLL)
     target_compile_options(${PROJECT_NAME}_shared PRIVATE "-Wno-unused-variable")
-	 if(WIN32) 
-		target_link_libraries(${PROJECT_NAME}_shared Dwmapi)
-		if (!MINGW)
-			install (FILES $<TARGET_PDB_FILE:${PROJECT_NAME}_shared> DESTINATION bin OPTIONAL)
-		endif()
-	elseif(APPLE)
-		find_package(Threads REQUIRED)
+
+    if(WIN32)
+        target_link_libraries(${PROJECT_NAME}_shared Dwmapi)
+        if (!MINGW)
+            install (FILES $<TARGET_PDB_FILE:${PROJECT_NAME}_shared> DESTINATION bin OPTIONAL)
+        endif()
+    elseif(APPLE)
+        find_package(Threads REQUIRED)
         find_library(corefoundation_lib CoreFoundation REQUIRED)
         find_library(cocoa_lib Cocoa REQUIRED)
         find_library(coremedia_lib CoreMedia REQUIRED)
@@ -118,22 +119,22 @@ else()
             ${coregraphics_lib}
             ${corevideo_lib}
         )
-	else()
-		find_package(X11 REQUIRED)
-		if(!X11_XTest_FOUND)
- 			message(FATAL_ERROR "X11 extensions are required, but not found!")
-		endif()
-		if(!X11_Xfixes_LIB)
- 			message(FATAL_ERROR "X11 fixes extension is required, but not found!")
-		endif()
-		find_package(Threads REQUIRED)
-		target_link_libraries(
+    else()
+        find_package(X11 REQUIRED)
+        if(!X11_XTest_FOUND)
+            message(FATAL_ERROR "X11 extensions are required, but not found!")
+        endif()
+        if(!X11_Xfixes_LIB)
+            message(FATAL_ERROR "X11 fixes extension is required, but not found!")
+        endif()
+        find_package(Threads REQUIRED)
+        target_link_libraries(
             ${PROJECT_NAME}_shared
-			${X11_LIBRARIES}
-			${X11_Xfixes_LIB}
-			${X11_XTest_LIB}
-			${X11_Xinerama_LIB}
-			${CMAKE_THREAD_LIBS_INIT}
-		)	 
-	endif()
+            ${X11_LIBRARIES}
+            ${X11_Xfixes_LIB}
+            ${X11_XTest_LIB}
+            ${X11_Xinerama_LIB}
+            ${CMAKE_THREAD_LIBS_INIT}
+        )
+    endif()
 endif()  

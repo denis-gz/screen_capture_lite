@@ -3,6 +3,7 @@
 #include <chrono>
 #include <AppKit/AppKit.h>
 
+
 @implementation FrameProcessor
 
 -(SL::Screen_Capture::DUPL_RETURN) Init:(SL::Screen_Capture::NSFrameProcessor*) parent second:(CMTime)interval
@@ -31,17 +32,16 @@
                 r.origin.x = parent->SelectedMonitor.OffsetX;
                 //apple uses the opengl texture coords where the bottom left is 0,0
                 r.origin.y = parent->SelectedMonitor.OriginalHeight - ((parent->SelectedMonitor.OffsetY - parent->SelectedMonitor.OriginalOffsetY) + parent->SelectedMonitor.Height);
-                r.size.height =parent->SelectedMonitor.Height;
-                r.size.width =parent->SelectedMonitor.Width;
+                r.size.height = parent->SelectedMonitor.Height;
+                r.size.width = parent->SelectedMonitor.Width;
                 [self.avinput setCropRect:r];
         }
         
         [self.avinput setMinFrameDuration:interval];
-        
-        
+
         self.avinput.capturesCursor = false;
         self.avinput.capturesMouseClicks = false;
-       
+
         [self.avcapturesession addOutput:self.output];
         [self.output setSampleBufferDelegate:self queue:dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_LOW, 0)];
         [self.avcapturesession startRunning];
