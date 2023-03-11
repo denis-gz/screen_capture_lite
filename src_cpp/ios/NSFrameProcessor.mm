@@ -14,8 +14,15 @@
         self.Paused = false;
         self.nsframeprocessor = parent;
         self.avcapturesession = [[AVCaptureSession alloc] init];
-       
+
+        NSNotificationCenter* notifier = [NSNotificationCenter defaultCenter];
+        [notifier addObserver:self selector:@selector(onVideoError:) name:AVCaptureSessionRuntimeErrorNotification object:self.avcapturesession];
+
         self.avinput = [[[AVCaptureScreenInput alloc] initWithDisplayID:SL::Screen_Capture::Id(parent->SelectedMonitor)] autorelease];
+        if (!self.avinput) {
+            parent->Data->LoggingCallback_("AVCaptureScreenInput:initWithDisplayID failed", -1);
+            return SL::Screen_Capture::DUPL_RETURN::DUPL_RETURN_ERROR_UNEXPECTED;
+        }
         [self.avcapturesession addInput:self.avinput];
         
         self.output = [[AVCaptureVideoDataOutput alloc] init];
@@ -81,6 +88,17 @@
         self.output.connections[0].enabled = YES;
     } 
 }
+
+-(void) onVideoError:(NSNotification *)notification {
+    NSDictionary* info = notification.userInfo;
+    if (!info)
+        return;
+    NSError* error = info[AVCaptureSessionErrorKey];
+    if (!error)
+        return;
+    self.nsframeprocessor->Data->LoggingCallback_(error.description.UTF8String, error.code);
+}
+
 
 - (void)captureOutput:(AVCaptureOutput *)captureOutput didOutputSampleBuffer:(CMSampleBufferRef)sampleBuffer fromConnection:(AVCaptureConnection *)connection {
     self.Working = true;
