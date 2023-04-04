@@ -14,7 +14,6 @@ namespace SL::Screen_Capture {
 
 bool IsMonitorInsideBounds(const Monitor *monitors, const int monitorsize, const Monitor &monitor)
 {
-
     auto totalwidth = 0;
 
     for (int i = 0; i < monitorsize; i++) {
@@ -46,7 +45,10 @@ bool IsMonitorInsideBounds(const Monitor *monitors, const int monitorsize, const
     return true;
 }
 
-bool isMonitorInsideBounds(const std::vector<Monitor> &monitors, const Monitor &monitor) { return IsMonitorInsideBounds(monitors.data(), (int)monitors.size(), monitor); }
+bool isMonitorInsideBounds(const std::vector<Monitor> &monitors, const Monitor &monitor) {
+
+    return IsMonitorInsideBounds(monitors.data(), (int) monitors.size(), monitor);
+}
 
 namespace C_API {
 

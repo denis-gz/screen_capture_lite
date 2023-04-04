@@ -17,10 +17,8 @@ namespace SL{
             CGGetActiveDisplayList(count, displays.data(), &count);
             for(auto  i = 0; i < count; i++) {
                 //only include non-mirrored displays
-                if(CGDisplayMirrorsDisplay(displays[i]) == kCGNullDirectDisplay){
-                    
+                if (CGDisplayMirrorsDisplay(displays[i]) == kCGNullDirectDisplay){
                     auto dismode =CGDisplayCopyDisplayMode(displays[i]);
-                    
                     auto width = CGDisplayModeGetPixelWidth(dismode);
                     auto height = CGDisplayModeGetPixelHeight(dismode);
                     CGDisplayModeRelease(dismode);
